@@ -1,0 +1,20 @@
+{
+  "name": "Ruta 84 — Plan de lectura bíblica",
+  "short_name": "Ruta 84",
+  "description": "Plan de 84 días hábiles con seguimiento capítulo a capítulo, lectura y escucha.",
+  "id": "/ruta84/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0C1311",
+  "theme_color": "#0C1311",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["books", "lifestyle", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

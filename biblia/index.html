@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0C1311">
+<meta name="description" content="Plan de lectura bíblica en 84 días hábiles, con seguimiento capítulo a capítulo, lectura y escucha.">
+<title>Ruta 84 — Plan de lectura bíblica</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0C1311; --surf:#131E1B; --surf2:#1A2724; --line:#263835;
+  --brass:#C8A24A; --verd:#5FA893; --text:#E9E6DC; --muted:#8B9C97; --debt:#C0574A;
+  --display:'Bodoni Moda',Georgia,serif; --body:'Inter',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--ink); color:var(--text); font-family:var(--body);
+  font-size:15px; line-height:1.5; overscroll-behavior-y:none;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── Cabecera ─────────────────────────────── */
+header{
+  padding:calc(14px + env(safe-area-inset-top)) 18px 12px;
+  border-bottom:1px solid var(--line); background:var(--surf);
+  position:sticky; top:0; z-index:20;
+}
+.brandrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-size:23px;letter-spacing:.01em;line-height:1}
+.brand em{font-style:italic;color:var(--brass)}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+/* ── Barra de estado: el instrumento ──────── */
+.gauge{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-top:12px;border:1px solid var(--line)}
+.gauge div{background:var(--surf);padding:8px 10px}
+.gauge .k{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.gauge .v{font-family:var(--mono);font-size:19px;font-weight:600;line-height:1.25;margin-top:2px}
+.v.ok{color:var(--verd)} .v.bad{color:var(--debt)} .v.neutral{color:var(--brass)}
+
+/* ── Pestañas ─────────────────────────────── */
+nav{display:flex;border-bottom:1px solid var(--line);background:var(--surf);position:sticky;top:0;z-index:19}
+nav button{
+  flex:1;padding:12px 4px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent
+}
+nav button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--brass)}
+
+main{padding:18px 18px 40px;max-width:760px;margin:0 auto}
+section[hidden]{display:none}
+
+/* ── Encabezado del día ───────────────────── */
+.dayhead{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:4px}
+.dayno{font-family:var(--display);font-size:52px;line-height:.85;color:var(--brass)}
+.dayno small{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;display:block;margin-top:8px}
+.daymeta{text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em;line-height:1.7}
+.rule{height:1px;background:var(--line);margin:16px 0}
+
+/* ── Pistas y capítulos ───────────────────── */
+.track{margin-bottom:20px}
+.trackname{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);display:flex;justify-content:space-between;align-items:center;
+  padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:10px
+}
+.trackname b{color:var(--brass);font-weight:500}
+.chaps{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  display:flex;align-items:center;gap:7px;padding:8px 11px;background:var(--surf);
+  border:1px solid var(--line);font-family:var(--mono);font-size:13px;transition:border-color .12s,background .12s
+}
+.chip .mark{
+  width:15px;height:15px;border:1px solid var(--line);flex:none;display:grid;place-items:center;
+  font-size:10px;color:transparent;background:var(--ink)
+}
+.chip.done{background:var(--surf2);border-color:#33534A;color:var(--muted)}
+.chip.done .mark{background:var(--verd);border-color:var(--verd);color:var(--ink)}
+.chip .lbl{white-space:nowrap}
+.chip .open{
+  font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--brass);
+  border-left:1px solid var(--line);padding-left:8px;margin-left:2px
+}
+
+/* ── Ruta: la parrilla de 84 ──────────────── */
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;margin-bottom:14px}
+.legend i{width:9px;height:9px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.grid{display:grid;grid-template-columns:26px repeat(5,1fr);gap:3px;font-family:var(--mono);font-size:9px}
+.grid .wk{color:var(--muted);display:grid;place-items:center;letter-spacing:.06em}
+.cell{
+  aspect-ratio:1/1;display:grid;place-items:center;border:1px solid var(--line);
+  background:var(--surf);color:var(--muted);font-size:9px;position:relative
+}
+.cell.done{background:var(--verd);border-color:var(--verd);color:var(--ink);font-weight:600}
+.cell.partial{background:linear-gradient(160deg,var(--verd) 0 50%,var(--surf) 50% 100%);border-color:#33534A;color:var(--text)}
+.cell.overdue{background:var(--surf);border-color:var(--debt);color:var(--debt)}
+.cell.today{outline:2px solid var(--brass);outline-offset:1px;color:var(--brass);font-weight:600}
+.cell.future{opacity:.42}
+.weeklist{margin-top:26px}
+.wrow{display:grid;grid-template-columns:38px 1fr auto;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:baseline}
+.wrow .n{font-family:var(--mono);font-size:11px;color:var(--brass);letter-spacing:.06em}
+.wrow .d{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+.wrow .t{color:var(--text);line-height:1.45}
+
+/* ── Selector de plan ─────────────────────── */
+.planopt{border:1px solid var(--line);background:var(--surf);padding:16px;margin-bottom:12px;text-align:left;width:100%;display:block}
+.planopt[aria-pressed="true"]{border-color:var(--brass);background:var(--surf2)}
+.planopt h3{font-family:var(--display);font-size:20px;font-weight:400;margin-bottom:3px}
+.planopt .code{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--brass);text-transform:uppercase}
+.planopt p{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.55}
+.planopt .load{font-family:var(--mono);font-size:11px;color:var(--text);margin-top:10px;letter-spacing:.04em}
+.warn{border-left:2px solid var(--debt);padding:10px 0 10px 12px;font-size:12.5px;color:var(--muted);margin:18px 0;line-height:1.6}
+.field{margin:16px 0}
+.field label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+.field select,.field input{
+  width:100%;padding:10px;background:var(--surf);border:1px solid var(--line);color:var(--text);
+  font-family:var(--mono);font-size:13px;border-radius:0
+}
+.danger{border:1px solid var(--debt);color:var(--debt);padding:11px;width:100%;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-top:28px}
+.static{padding:11px;background:var(--surf);border:1px solid var(--line);font-family:var(--mono);font-size:12px;line-height:1.6}
+.static .sub{color:var(--muted);font-size:10.5px}
+.dl{border:1px solid var(--brass);color:var(--brass);padding:11px;width:100%;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.dl[disabled]{opacity:.5}
+.dlstate{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:9px;line-height:1.7;min-height:18px}
+.dlbar{height:2px;background:var(--line);margin-top:8px}
+.dlbar i{display:block;height:100%;background:var(--verd);width:0;transition:width .2s}
+
+/* ── Lector ───────────────────────────────── */
+.reader{position:fixed;inset:0;background:var(--ink);z-index:60;display:flex;flex-direction:column}
+.reader[hidden]{display:none}
+.rhead{
+  padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line);
+  background:var(--surf);display:flex;align-items:center;gap:12px
+}
+.rhead .ref{font-family:var(--display);font-size:20px;flex:1}
+.rhead button{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);padding:6px}
+.rbody{flex:1;overflow-y:auto;padding:22px 20px 30px;-webkit-overflow-scrolling:touch}
+.rbody p{margin-bottom:13px;font-size:17px;line-height:1.72;max-width:62ch}
+.rbody p .vn{font-family:var(--mono);font-size:10px;color:var(--brass);vertical-align:super;margin-right:5px;letter-spacing:0}
+.rbody p.speaking{background:rgba(200,162,74,.11);box-shadow:-10px 0 0 rgba(200,162,74,.11),10px 0 0 rgba(200,162,74,.11)}
+.rstate{font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.8}
+.rstate a{color:var(--brass)}
+.rfoot{
+  border-top:1px solid var(--line);background:var(--surf);padding:11px 14px calc(11px + env(safe-area-inset-bottom));
+  display:flex;gap:9px;align-items:center
+}
+.rfoot button{
+  padding:11px 13px;border:1px solid var(--line);font-family:var(--mono);font-size:11px;
+  letter-spacing:.09em;text-transform:uppercase;white-space:nowrap
+}
+.rfoot button.primary{border-color:var(--brass);color:var(--brass)}
+.rfoot button.done{border-color:var(--verd);color:var(--verd)}
+.rfoot .rate{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.rfoot .rate select{background:var(--surf2);border:1px solid var(--line);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px;border-radius:0}
+.empty{color:var(--muted);font-size:13.5px;line-height:1.65;padding:20px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brandrow">
+    <div class="brand">Ruta <em>84</em></div>
+    <div class="tag" id="planTag">Plan —</div>
+  </div>
+  <div class="gauge">
+    <div><div class="k">Día</div><div class="v neutral" id="gDay">—</div></div>
+    <div><div class="k">Leídos</div><div class="v ok" id="gRead">—</div></div>
+    <div><div class="k">Atraso</div><div class="v" id="gDebt">—</div></div>
+  </div>
+</header>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-tab="hoy">Hoy</button>
+  <button role="tab" aria-selected="false" data-tab="ruta">Ruta</button>
+  <button role="tab" aria-selected="false" data-tab="plan">Plan</button>
+</nav>
+
+<main>
+  <section id="tab-hoy"></section>
+  <section id="tab-ruta" hidden></section>
+  <section id="tab-plan" hidden></section>
+</main>
+
+<div class="reader" id="reader" hidden>
+  <div class="rhead">
+    <button id="rClose" aria-label="Cerrar lectura">✕ Cerrar</button>
+    <div class="ref" id="rRef"></div>
+  </div>
+  <div class="rbody" id="rBody"></div>
+  <div class="rfoot">
+    <button id="rPlay" class="primary">▶ Escuchar</button>
+    <button id="rStop">■</button>
+    <button id="rDone" class="done">✓ Marcar</button>
+    <div class="rate"><label for="rRate">vel</label><select id="rRate">
+      <option value="0.85">0.85×</option><option value="1" selected>1×</option>
+      <option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option>
+    </select></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ══ 1. Canon: nombre es, nombre api, capítulos ══════════════════════ */
+const B = {
+ GEN:["Génesis","genesis",50], EXO:["Éxodo","exodus",40], LEV:["Levítico","leviticus",27],
+ NUM:["Números","numbers",36], DEU:["Deuteronomio","deuteronomy",34], JOS:["Josué","joshua",24],
+ JDG:["Jueces","judges",21], RUT:["Rut","ruth",4], S1:["1 Samuel","1 samuel",31],
+ S2:["2 Samuel","2 samuel",24], K1:["1 Reyes","1 kings",22], K2:["2 Reyes","2 kings",25],
+ C1:["1 Crónicas","1 chronicles",29], C2:["2 Crónicas","2 chronicles",36], EZR:["Esdras","ezra",10],
+ NEH:["Nehemías","nehemiah",13], EST:["Ester","esther",10], JOB:["Job","job",42],
+ PSA:["Salmos","psalms",150], PRO:["Proverbios","proverbs",31], ECC:["Eclesiastés","ecclesiastes",12],
+ SNG:["Cantares","song of solomon",8], ISA:["Isaías","isaiah",66], JER:["Jeremías","jeremiah",52],
+ LAM:["Lamentaciones","lamentations",5], EZK:["Ezequiel","ezekiel",48], DAN:["Daniel","daniel",12],
+ HOS:["Oseas","hosea",14], JOL:["Joel","joel",3], AMO:["Amós","amos",9], OBA:["Abdías","obadiah",1],
+ JON:["Jonás","jonah",4], MIC:["Miqueas","micah",7], NAM:["Nahúm","nahum",3], HAB:["Habacuc","habakkuk",3],
+ ZEP:["Sofonías","zephaniah",3], HAG:["Hageo","haggai",2], ZEC:["Zacarías","zechariah",14],
+ MAL:["Malaquías","malachi",4],
+ MAT:["Mateo","matthew",28], MRK:["Marcos","mark",16], LUK:["Lucas","luke",24], JHN:["Juan","john",21],
+ ACT:["Hechos","acts",28], ROM:["Romanos","romans",16], CO1:["1 Corintios","1 corinthians",16],
+ CO2:["2 Corintios","2 corinthians",13], GAL:["Gálatas","galatians",6], EPH:["Efesios","ephesians",6],
+ PHP:["Filipenses","philippians",4], COL:["Colosenses","colossians",4],
+ TH1:["1 Tesalonicenses","1 thessalonians",5], TH2:["2 Tesalonicenses","2 thessalonians",3],
+ TI1:["1 Timoteo","1 timothy",6], TI2:["2 Timoteo","2 timothy",4], TIT:["Tito","titus",3],
+ PHM:["Filemón","philemon",1], HEB:["Hebreos","hebrews",13], JAS:["Santiago","james",5],
+ PE1:["1 Pedro","1 peter",5], PE2:["2 Pedro","2 peter",3], JN1:["1 Juan","1 john",5],
+ JN2:["2 Juan","2 john",1], JN3:["3 Juan","3 john",1], JUD:["Judas","jude",1],
+ REV:["Apocalipsis","revelation",22]
+};
+const CANON = Object.keys(B);
+
+/* seg("GEN") = libro completo · seg("GEN",1,11) = rango */
+function seg(id,a,b){ return {id, a: a||1, b: b||B[id][2]}; }
+function expand(segs){
+  const out=[];
+  for(const s of segs) for(let c=s.a;c<=s.b;c++) out.push([s.id,c]);
+  return out;
+}
+
+/* ══ 2. Las tres estrategias ═════════════════════════════════════════ */
+const CANONICAL = CANON.map(id=>seg(id));
+
+const CHRONO = [
+  seg("GEN",1,11), seg("JOB"), seg("GEN",12,50), seg("EXO"), seg("LEV"), seg("NUM"), seg("DEU"),
+  seg("JOS"), seg("JDG"), seg("RUT"), seg("S1"), seg("S2"), seg("PSA",1,22), seg("C1"),
+  seg("PSA",23,64), seg("K1",1,11), seg("C2",1,9), seg("PRO"), seg("ECC"), seg("SNG"),
+  seg("PSA",65,150), seg("K1",12,22), seg("C2",10,20), seg("K2",1,17), seg("OBA"), seg("JOL"),
+  seg("JON"), seg("AMO"), seg("HOS"), seg("ISA"), seg("MIC"), seg("NAM"), seg("ZEP"), seg("HAB"),
+  seg("K2",18,25), seg("C2",21,36), seg("JER"), seg("LAM"), seg("EZK"), seg("DAN"), seg("EZR"),
+  seg("HAG"), seg("ZEC"), seg("EST"), seg("NEH"), seg("MAL"),
+  seg("MAT"), seg("MRK"), seg("LUK"), seg("JHN"), seg("ACT",1,12), seg("JAS"), seg("GAL"),
+  seg("ACT",13,18), seg("TH1"), seg("TH2"), seg("ACT",19,19), seg("CO1"), seg("CO2"), seg("ROM"),
+  seg("ACT",20,28), seg("EPH"), seg("PHP"), seg("COL"), seg("PHM"), seg("TI1"), seg("TIT"),
+  seg("PE1"), seg("HEB"), seg("TI2"), seg("PE2"), seg("JUD"), seg("JN1"), seg("JN2"), seg("JN3"),
+  seg("REV")
+];
+
+const TRACKS = {
+  narrativa: ["GEN","EXO","LEV","NUM","DEU","JOS","JDG","RUT","S1","S2","K1","K2","C1","C2","EZR","NEH","EST","DAN"].map(id=>seg(id)),
+  profetas : ["JON","AMO","OBA","HOS","JOL","MIC","NAM","HAB","ZEP","ISA","JER","LAM","EZK","HAG","ZEC","MAL"].map(id=>seg(id)),
+  sabiduria: ["JOB","PSA","PRO","ECC","SNG"].map(id=>seg(id)),
+  nt       : ["MAT","MRK","LUK","JHN","ACT","JAS","GAL","TH1","TH2","CO1","CO2","ROM","EPH","PHP","COL","PHM","TI1","TI2","TIT","HEB","PE1","PE2","JN1","JN2","JN3","JUD","REV"].map(id=>seg(id))
+};
+
+/* ══ 3. Calendario: 84 días hábiles, 17-ago → 10-dic 2026 ════════════ */
+function buildDates(){
+  const out=[], d=new Date(2026,7,17), end=new Date(2026,11,10);
+  while(d<=end){ const w=d.getDay(); if(w>=1&&w<=5) out.push(new Date(d)); d.setDate(d.getDate()+1); }
+  return out;
+}
+const DATES = buildDates();
+const NDAYS = DATES.length;                       // 84
+const iso = d => d.toISOString().slice(0,10);
+const MES=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const DIA=["dom","lun","mar","mié","jue","vie","sáb"];
+const fmt = d => `${DIA[d.getDay()]} ${d.getDate()} ${MES[d.getMonth()]}`;
+
+/* Reparte n capítulos en 84 días lo más parejo posible */
+function slice(list){
+  const base=Math.floor(list.length/NDAYS), rem=list.length%NDAYS, days=[]; let i=0;
+  for(let d=0;d<NDAYS;d++){ const take=base+(d<rem?1:0); days.push(list.slice(i,i+take)); i+=take; }
+  return days;
+}
+
+const PLANS = {
+  A:{ code:"A", name:"Canónico", blurb:"Génesis a Apocalipsis en orden. Un solo hilo, cero fricción de navegación — pero el Nuevo Testamento no aparece hasta la semana 14.",
+      tracks:{ lectura: slice(expand(CANONICAL)) } },
+  B:{ code:"B", name:"Cronológico", blurb:"Orden aproximado de los eventos. Isaías cae junto a 2 Reyes, los Salmos junto a David, las epístolas dentro de Hechos.",
+      tracks:{ lectura: slice(expand(CHRONO)) } },
+  C:{ code:"C", name:"Pistas paralelas", blurb:"Cuatro hilos a la vez: narrativa, profetas, sabiduría y Nuevo Testamento. Levítico baja a 5 capítulos diarios y el NT acompaña los cuatro meses.",
+      tracks:{ narrativa:slice(expand(TRACKS.narrativa)), profetas:slice(expand(TRACKS.profetas)),
+               sabiduria:slice(expand(TRACKS.sabiduria)), nt:slice(expand(TRACKS.nt)) } }
+};
+const TRACKLABEL={lectura:"Lectura",narrativa:"Narrativa AT",profetas:"Profetas",sabiduria:"Sabiduría",nt:"Nuevo Testamento"};
+
+/* ══ 4. Estado ═══════════════════════════════════════════════════════ */
+const KEY="ruta84:v1";
+let S={ plan:"C", done:{}, voice:null };
+
+const store={
+  async get(){ try{
+      if(window.storage){ const r=await window.storage.get(KEY); return r?JSON.parse(r.value):null; }
+      const v=localStorage.getItem(KEY); return v?JSON.parse(v):null;
+    }catch(e){ return null; } },
+  async set(o){ try{
+      if(window.storage){ await window.storage.set(KEY,JSON.stringify(o)); return; }
+      localStorage.setItem(KEY,JSON.stringify(o));
+    }catch(e){ console.warn("No se pudo guardar:",e); } }
+};
+const save = () => store.set(S);
+const ckey = (b,c) => `${S.plan}:${b}.${c}`;
+const isDone = (b,c) => !!S.done[ckey(b,c)];
+function toggle(b,c,force){
+  const k=ckey(b,c), v = force===undefined ? !S.done[k] : force;
+  if(v) S.done[k]=1; else delete S.done[k];
+  save();
+}
+
+/* ══ 5. Métricas ═════════════════════════════════════════════════════ */
+function dayChapters(di){
+  const p=PLANS[S.plan], out=[];
+  for(const t in p.tracks) for(const ch of p.tracks[t][di]) out.push({track:t,b:ch[0],c:ch[1]});
+  return out;
+}
+function todayIndex(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  for(let i=0;i<NDAYS;i++){ const d=new Date(DATES[i]); d.setHours(0,0,0,0); if(d>=now) return i; }
+  return NDAYS-1;
+}
+function dayState(di){
+  const ch=dayChapters(di), done=ch.filter(x=>isDone(x.b,x.c)).length;
+  return {total:ch.length, done, full:done===ch.length&&ch.length>0, any:done>0};
+}
+function metrics(){
+  const ti=todayIndex();
+  const past=new Date(); past.setHours(0,0,0,0);
+  let expected=0; for(let i=0;i<NDAYS;i++){ const d=new Date(DATES[i]); d.setHours(0,0,0,0); if(d<=past) expected+=dayChapters(i).length; }
+  let read=0; for(let i=0;i<NDAYS;i++) read+=dayState(i).done;
+  return { ti, read, total:1189, debt:Math.max(0,expected-read) };
+}
+
+/* ══ 6. Pintado ══════════════════════════════════════════════════════ */
+const $ = s => document.querySelector(s);
+
+function renderGauges(){
+  const m=metrics();
+  $("#planTag").textContent = `Plan ${PLANS[S.plan].code} · ${PLANS[S.plan].name}`;
+  $("#gDay").textContent = `${m.ti+1}/${NDAYS}`;
+  $("#gRead").textContent = `${m.read}`;
+  const g=$("#gDebt");
+  g.textContent = m.debt===0 ? "0" : `−${m.debt}`;
+  g.className = "v " + (m.debt===0?"ok":m.debt<=15?"neutral":"bad");
+}
+
+function renderHoy(){
+  const di=todayIndex(), p=PLANS[S.plan], st=dayState(di);
+  let h=`<div class="dayhead">
+    <div class="dayno">${String(di+1).padStart(2,"0")}<small>DE ${NDAYS}</small></div>
+    <div class="daymeta">${fmt(DATES[di])}<br>${st.done} / ${st.total} capítulos<br>Plan ${p.code}</div>
+  </div><div class="rule"></div>`;
+
+  for(const t in p.tracks){
+    const list=p.tracks[t][di];
+    if(!list.length) continue;
+    const d=list.filter(x=>isDone(x[0],x[1])).length;
+    h+=`<div class="track"><div class="trackname"><span>${TRACKLABEL[t]}</span><b>${d}/${list.length}</b></div><div class="chaps">`;
+    for(const [b,c] of list){
+      h+=`<div class="chip ${isDone(b,c)?"done":""}">
+        <button class="mark" data-tg="${b}|${c}" aria-label="Marcar ${B[b][0]} ${c}">✓</button>
+        <span class="lbl">${B[b][0]} ${c}</span>
+        <button class="open" data-rd="${b}|${c}">LEER</button>
+      </div>`;
+    }
+    h+=`</div></div>`;
+  }
+  $("#tab-hoy").innerHTML=h;
+}
+
+function renderRuta(){
+  const ti=todayIndex();
+  let h=`<div class="legend">
+    <span><i style="background:var(--verd)"></i>Completo</span>
+    <span><i style="background:var(--surf);border:1px solid var(--debt)"></i>Atrasado</span>
+    <span><i style="background:var(--surf);border:1px solid var(--brass)"></i>Hoy</span>
+    <span><i style="background:var(--surf);border:1px solid var(--line)"></i>Pendiente</span>
+  </div><div class="grid">`;
+  for(let w=0; w<Math.ceil(NDAYS/5); w++){
+    h+=`<div class="wk">S${w+1}</div>`;
+    for(let k=0;k<5;k++){
+      const i=w*5+k;
+      if(i>=NDAYS){ h+=`<div></div>`; continue; }
+      const s=dayState(i);
+      let cls="cell";
+      if(s.full) cls+=" done"; else if(s.any) cls+=" partial";
+      else if(i<ti) cls+=" overdue"; else if(i>ti) cls+=" future";
+      if(i===ti) cls+=" today";
+      h+=`<div class="${cls}" title="${fmt(DATES[i])} · ${s.done}/${s.total}">${DATES[i].getDate()}</div>`;
+    }
+  }
+  h+=`</div><div class="weeklist">`;
+  const p=PLANS[S.plan];
+  for(let w=0; w<Math.ceil(NDAYS/5); w++){
+    const a=w*5, b=Math.min(a+4,NDAYS-1), refs=[];
+    for(const t in p.tracks){
+      const chs=[]; for(let i=a;i<=b;i++) chs.push(...p.tracks[t][i]);
+      if(chs.length) refs.push(condense(chs));
+    }
+    h+=`<div class="wrow"><div class="n">S${w+1}</div><div class="t">${refs.join(" · ")}</div>
+        <div class="d">${DATES[a].getDate()}–${DATES[b].getDate()} ${MES[DATES[b].getMonth()]}</div></div>`;
+  }
+  $("#tab-ruta").innerHTML=h+`</div>`;
+}
+
+/* "Gn 1–27" a partir de una lista de capítulos */
+function condense(chs){
+  const parts=[]; let cur=null;
+  for(const [b,c] of chs){
+    if(cur && cur.b===b && c===cur.end+1){ cur.end=c; continue; }
+    if(cur) parts.push(cur); cur={b, start:c, end:c};
+  }
+  if(cur) parts.push(cur);
+  return parts.map(p=>{
+    const n=B[p.b][0];
+    if(p.start===1 && p.end===B[p.b][2]) return n;
+    return p.start===p.end ? `${n} ${p.start}` : `${n} ${p.start}–${p.end}`;
+  }).join(", ");
+}
+
+function renderPlan(){
+  let h="";
+  for(const k of ["A","B","C"]){
+    const p=PLANS[k];
+    const per=Object.values(p.tracks).reduce((s,t)=>s+t[0].length,0);
+    h+=`<button class="planopt" data-plan="${k}" aria-pressed="${S.plan===k}">
+      <div class="code">Escenario ${p.code}</div><h3>${p.name}</h3>
+      <p>${p.blurb}</p>
+      <div class="load">${per} capítulos/día · ${Object.keys(p.tracks).length} ${Object.keys(p.tracks).length>1?"pistas":"pista"}</div>
+    </button>`;
+  }
+  h+=`<div class="warn">Cambiar de plan conserva el progreso de cada plan por separado. No se pierde nada al probar otro.</div>
+  <div class="field"><label>Texto</label>
+    <div class="static">Reina-Valera 1909 · dominio público<br><span class="sub">Incluida en la app. No depende de ningún servicio externo.</span></div>
+  </div>
+
+  <div class="field"><label for="fVoice">Voz</label>
+    <select id="fVoice"><option>Cargando voces…</option></select>
+    <div class="dlstate" id="voiceInfo"></div>
+  </div>
+
+  <button class="dl" id="dl">Guardar Biblia completa</button>
+  <div class="dlstate" id="dlstate">Los libros se guardan solos al abrirlos. Este botón los baja todos de una vez (~4 MB) para que funcione sin conexión desde ya.</div>
+
+  <button class="danger" id="reset">Borrar todo el progreso</button>`;
+  $("#tab-plan").innerHTML=h;
+  renderVoices();
+}
+
+function renderAll(){ renderGauges(); renderHoy(); renderRuta(); renderPlan(); }
+
+/* ══ 7. Lector + voz ═════════════════════════════════════════════════ */
+let cur=null, chunks=[], idx=0, speaking=false;
+
+/* El texto vive en biblia/<LIBRO>.json, servido desde el mismo origen.
+   Un libro se descarga una sola vez y queda en memoria + caché del service worker. */
+const bookCache = {};
+async function loadBook(b){
+  if(bookCache[b]) return bookCache[b];
+  const r = await fetch(`biblia/${b}.json`);
+  if(!r.ok) throw new Error(`no se encontró biblia/${b}.json (HTTP ${r.status})`);
+  bookCache[b] = await r.json();
+  return bookCache[b];
+}
+
+async function openReader(b,c){
+  cur={b,c};
+  $("#rRef").textContent=`${B[b][0]} ${c}`;
+  $("#rDone").textContent = isDone(b,c) ? "✓ Leído" : "✓ Marcar";
+  $("#reader").hidden=false;
+  stopVoice();
+  if(!bookCache[b]) $("#rBody").innerHTML=`<div class="rstate">Abriendo ${B[b][0]}…</div>`;
+  try{
+    const book = await loadBook(b);
+    const ch = book[String(c)];
+    if(!ch) throw new Error(`${B[b][0]} ${c} no está en el archivo`);
+    const nums = Object.keys(ch).sort((x,y)=>+x-+y);
+    $("#rBody").innerHTML = nums.map((n,i)=>
+      `<p data-i="${i}"><span class="vn">${n}</span>${ch[n]}</p>`).join("");
+    chunks = nums.map((n,i)=>({i, t:ch[n]}));
+    idx=0;
+    $("#rBody").scrollTop=0;
+  }catch(e){
+    chunks=[];
+    $("#rBody").innerHTML=`<div class="rstate">No se pudo abrir el capítulo.<br>${e.message}<br><br>
+      Si acabas de publicar la app, confirma que la carpeta <b>biblia/</b> se subió completa (66 archivos).<br><br>
+      Mientras tanto:<br>
+      <a href="https://www.bible.com/es/search/bible?q=${encodeURIComponent(B[b][0]+" "+c)}" target="_blank" rel="noopener">Abrir en YouVersion</a><br><br>
+      Puedes marcarlo como leído igual.</div>`;
+  }
+}
+
+function pickVoice(){
+  const vs=speechSynthesis.getVoices();
+  if(S.voice){ const m=vs.find(v=>v.voiceURI===S.voice); if(m) return m; }
+  // Preferir una voz instalada en el aparato: funciona sin conexión y sin gastar datos.
+  const es=vs.filter(v=>/^es/i.test(v.lang));
+  return es.find(v=>v.localService) || es[0] || null;
+}
+
+function renderVoices(){
+  const sel=$("#fVoice"), info=$("#voiceInfo");
+  if(!sel) return;
+  if(!("speechSynthesis" in window)){
+    sel.innerHTML=`<option>Este navegador no tiene síntesis de voz</option>`;
+    info.textContent="Prueba con Chrome."; return;
+  }
+  const es=speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang));
+  if(!es.length){
+    sel.innerHTML=`<option>Sin voces en español</option>`;
+    info.innerHTML=`Instálalas en <b>Ajustes → Sistema → Idiomas → Salida de texto a voz → Google TTS → Instalar datos de voz → Español</b>, y vuelve a abrir la app.`;
+    return;
+  }
+  const active=pickVoice();
+  sel.innerHTML=es.map(v=>
+    `<option value="${v.voiceURI}" ${active&&v.voiceURI===active.voiceURI?"selected":""}>${v.localService?"● ":"○ "}${v.name} · ${v.lang}</option>`
+  ).join("");
+  const local=es.filter(v=>v.localService).length;
+  info.innerHTML = active && active.localService
+    ? `● Voz instalada en el aparato: funciona sin conexión y no consume datos.`
+    : `○ Voz remota: necesita conexión y consume datos en cada capítulo.${local?" Hay voces instaladas disponibles — elige una marcada con ●." : " Descarga los datos de voz en español desde los ajustes del sistema para usarla sin conexión."}`;
+}
+function speakFrom(i){
+  if(i>=chunks.length){ stopVoice(); return; }
+  idx=i; speaking=true;
+  $("#rPlay").textContent="❚❚ Pausar";
+  const u=new SpeechSynthesisUtterance(chunks[i].t);
+  u.rate=parseFloat($("#rRate").value);
+  const v=pickVoice();
+  if(v){ u.voice=v; u.lang=v.lang; } else { u.lang="es-ES"; }
+  u.onend=()=>{ if(speaking) speakFrom(i+1); };
+  u.onerror=()=>stopVoice();
+  document.querySelectorAll("#rBody p").forEach(p=>p.classList.remove("speaking"));
+  const p=$(`#rBody p[data-i="${chunks[i].i}"]`);
+  if(p){ p.classList.add("speaking"); p.scrollIntoView({block:"center",behavior:"smooth"}); }
+  speechSynthesis.speak(u);
+}
+function stopVoice(){
+  speaking=false; speechSynthesis.cancel();
+  $("#rPlay").textContent="▶ Escuchar";
+  document.querySelectorAll("#rBody p").forEach(p=>p.classList.remove("speaking"));
+}
+
+/* ══ 8. Eventos ══════════════════════════════════════════════════════ */
+document.querySelectorAll("nav button").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected", b===btn));
+    ["hoy","ruta","plan"].forEach(t=>$("#tab-"+t).hidden = t!==btn.dataset.tab);
+    window.scrollTo(0,0);
+  };
+});
+
+document.addEventListener("click",e=>{
+  const tg=e.target.closest("[data-tg]");
+  if(tg){ const [b,c]=tg.dataset.tg.split("|"); toggle(b,+c); renderGauges(); renderHoy(); renderRuta(); return; }
+  const rd=e.target.closest("[data-rd]");
+  if(rd){ const [b,c]=rd.dataset.rd.split("|"); openReader(b,+c); return; }
+  const pl=e.target.closest("[data-plan]");
+  if(pl){ S.plan=pl.dataset.plan; save(); renderAll(); window.scrollTo(0,0); return; }
+  if(e.target.id==="dl"){ prefetch(); return; }
+  if(e.target.id==="reset"){
+    if(confirm("Se borra el progreso de los tres planes. ¿Continuar?")){ S.done={}; save(); renderAll(); }
+  }
+});
+
+document.addEventListener("change",e=>{
+  if(e.target.id==="fVoice"){ S.voice=e.target.value; save(); renderVoices(); }
+});
+
+$("#rClose").onclick=()=>{ stopVoice(); $("#reader").hidden=true; renderGauges(); renderHoy(); renderRuta(); };
+$("#rPlay").onclick=()=>{
+  if(!chunks.length) return;
+  if(speaking){ stopVoice(); } else { speakFrom(idx<chunks.length?idx:0); }
+};
+$("#rStop").onclick=()=>{ stopVoice(); idx=0; };
+$("#rDone").onclick=()=>{
+  if(!cur) return;
+  toggle(cur.b,cur.c);
+  $("#rDone").textContent = isDone(cur.b,cur.c) ? "✓ Leído" : "✓ Marcar";
+};
+$("#rRate").onchange=()=>{ if(speaking){ speechSynthesis.cancel(); speakFrom(idx); } };
+if("speechSynthesis" in window) speechSynthesis.onvoiceschanged=()=>renderVoices();
+
+/* ══ 8b. Precarga de los 66 libros para uso sin conexión ═════════════ */
+async function prefetch(){
+  const btn=$("#dl"), out=$("#dlstate"), books=CANON.slice();
+  btn.disabled=true; btn.textContent="Guardando…";
+  out.innerHTML=`0 / ${books.length} libros<div class="dlbar"><i></i></div>`;
+  const bar=out.querySelector(".dlbar i");
+  let ok=0, fail=0;
+
+  for(let i=0;i<books.length;i+=6){
+    await Promise.all(books.slice(i,i+6).map(b=>
+      fetch(`biblia/${b}.json`).then(r=>{ r.ok?ok++:fail++; }).catch(()=>{ fail++; })
+    ));
+    const n=Math.min(i+6,books.length);
+    out.firstChild.textContent=`${n} / ${books.length} libros`;
+    bar.style.width=(n/books.length*100)+"%";
+  }
+
+  btn.disabled=false; btn.textContent="Guardar Biblia completa";
+  out.innerHTML = fail
+    ? `${ok} libros guardados · ${fail} fallaron. Reintenta con mejor señal.`
+    : `Biblia completa guardada (~4 MB). Ya funciona sin conexión.`;
+}
+
+/* ══ 8c. Service worker ══════════════════════════════════════════════ */
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js").catch(e=>console.warn("[sw]",e.message));
+  });
+}
+let installEvt=null;
+window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); installEvt=e; showInstall(); });
+function showInstall(){
+  if(!installEvt || document.getElementById("installBar")) return;
+  const d=document.createElement("button");
+  d.id="installBar";
+  d.style.cssText="position:fixed;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:50;background:var(--surf2);border:1px solid var(--brass);color:var(--brass);padding:13px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase";
+  d.textContent="＋ Instalar en el celular";
+  d.onclick=async()=>{ d.remove(); installEvt.prompt(); await installEvt.userChoice; installEvt=null; };
+  document.body.appendChild(d);
+}
+
+/* ══ 9. Arranque ═════════════════════════════════════════════════════ */
+(async()=>{
+  const saved=await store.get();
+  if(saved) S=Object.assign(S,saved);
+  renderAll();
+  // Verificación de integridad: los tres planes deben cubrir 1189 capítulos.
+  for(const k in PLANS){
+    const n=Object.values(PLANS[k].tracks).reduce((s,t)=>s+t.reduce((a,d)=>a+d.length,0),0);
+    if(n!==1189) console.error(`Plan ${k}: ${n} capítulos (esperado 1189)`);
+  }
+})();
+</script>
+</body>
+</html>
