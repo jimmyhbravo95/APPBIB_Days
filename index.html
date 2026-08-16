@@ -127,6 +127,8 @@ section[hidden]{display:none}
   font-family:var(--mono);font-size:13px;border-radius:0
 }
 .danger{border:1px solid var(--debt);color:var(--debt);padding:11px;width:100%;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-top:28px}
+.static{padding:11px;background:var(--surf);border:1px solid var(--line);font-family:var(--mono);font-size:12px;line-height:1.6}
+.static .sub{color:var(--muted);font-size:10.5px}
 .dl{border:1px solid var(--brass);color:var(--brass);padding:11px;width:100%;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
 .dl[disabled]{opacity:.5}
 .dlstate{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:9px;line-height:1.7;min-height:18px}
@@ -303,7 +305,7 @@ const TRACKLABEL={lectura:"Lectura",narrativa:"Narrativa AT",profetas:"Profetas"
 
 /* ══ 4. Estado ═══════════════════════════════════════════════════════ */
 const KEY="ruta84:v1";
-let S={ plan:"C", done:{}, source:"bible-api", version:"rvr09" };
+let S={ plan:"C", done:{}, voice:null };
 
 const store={
   async get(){ try{
@@ -446,26 +448,21 @@ function renderPlan(){
     </button>`;
   }
   h+=`<div class="warn">Cambiar de plan conserva el progreso de cada plan por separado. No se pierde nada al probar otro.</div>
-  <div class="field"><label for="fSrc">Versión del texto</label>
-    <select id="fSrc">
-      <option value="rvr09">Reina-Valera 1909 · dominio público</option>
-      <option value="almeida">Almeida (pt)</option>
-      <option value="kjv">King James (en)</option>
-    </select></div>
-  <div class="warn">El texto se descarga de bible-api.com. Las versiones con derechos vigentes (RVR1960, NVI, NTV) no están disponibles por API pública.</div>
+  <div class="field"><label>Texto</label>
+    <div class="static">Reina-Valera 1909 · dominio público<br><span class="sub">Incluida en la app. No depende de ningún servicio externo.</span></div>
+  </div>
 
-  <div class="field"><label for="fWeeks">Descargar para leer sin conexión</label>
-    <select id="fWeeks">
-      <option value="1">Próxima semana · 5 días</option>
-      <option value="2" selected>Próximas 2 semanas · 10 días</option>
-      <option value="4">Próximas 4 semanas · 20 días</option>
-    </select></div>
-  <button class="dl" id="dl">Descargar capítulos</button>
-  <div class="dlstate" id="dlstate"></div>
+  <div class="field"><label for="fVoice">Voz</label>
+    <select id="fVoice"><option>Cargando voces…</option></select>
+    <div class="dlstate" id="voiceInfo"></div>
+  </div>
+
+  <button class="dl" id="dl">Guardar Biblia completa</button>
+  <div class="dlstate" id="dlstate">Los libros se guardan solos al abrirlos. Este botón los baja todos de una vez (~4 MB) para que funcione sin conexión desde ya.</div>
 
   <button class="danger" id="reset">Borrar todo el progreso</button>`;
   $("#tab-plan").innerHTML=h;
-  $("#fSrc").value=S.version;
+  renderVoices();
 }
 
 function renderAll(){ renderGauges(); renderHoy(); renderRuta(); renderPlan(); }
@@ -473,44 +470,82 @@ function renderAll(){ renderGauges(); renderHoy(); renderRuta(); renderPlan(); }
 /* ══ 7. Lector + voz ═════════════════════════════════════════════════ */
 let cur=null, chunks=[], idx=0, speaking=false;
 
+/* El texto vive en biblia/<LIBRO>.json, servido desde el mismo origen.
+   Un libro se descarga una sola vez y queda en memoria + caché del service worker. */
+const bookCache = {};
+async function loadBook(b){
+  if(bookCache[b]) return bookCache[b];
+  const r = await fetch(`biblia/${b}.json`);
+  if(!r.ok) throw new Error(`no se encontró biblia/${b}.json (HTTP ${r.status})`);
+  bookCache[b] = await r.json();
+  return bookCache[b];
+}
+
 async function openReader(b,c){
   cur={b,c};
   $("#rRef").textContent=`${B[b][0]} ${c}`;
   $("#rDone").textContent = isDone(b,c) ? "✓ Leído" : "✓ Marcar";
-  $("#rBody").innerHTML=`<div class="rstate">Descargando ${B[b][0]} ${c}…</div>`;
   $("#reader").hidden=false;
   stopVoice();
-  const url=`https://bible-api.com/${encodeURIComponent(B[b][1]+" "+c)}?translation=${S.version}`;
+  if(!bookCache[b]) $("#rBody").innerHTML=`<div class="rstate">Abriendo ${B[b][0]}…</div>`;
   try{
-    const r=await fetch(url);
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    const j=await r.json();
-    if(!j.verses||!j.verses.length) throw new Error("sin versículos");
-    $("#rBody").innerHTML=j.verses.map((v,i)=>
-      `<p data-i="${i}"><span class="vn">${v.verse}</span>${v.text.trim().replace(/\s+/g," ")}</p>`).join("");
-    chunks=j.verses.map((v,i)=>({i, t:v.text.trim().replace(/\s+/g," ")}));
+    const book = await loadBook(b);
+    const ch = book[String(c)];
+    if(!ch) throw new Error(`${B[b][0]} ${c} no está en el archivo`);
+    const nums = Object.keys(ch).sort((x,y)=>+x-+y);
+    $("#rBody").innerHTML = nums.map((n,i)=>
+      `<p data-i="${i}"><span class="vn">${n}</span>${ch[n]}</p>`).join("");
+    chunks = nums.map((n,i)=>({i, t:ch[n]}));
+    idx=0;
     $("#rBody").scrollTop=0;
   }catch(e){
     chunks=[];
-    $("#rBody").innerHTML=`<div class="rstate">No se pudo descargar el texto (${e.message}).<br><br>
-      Revisa la conexión, o abre el capítulo aquí:<br>
-      <a href="https://www.biblegateway.com/passage/?search=${encodeURIComponent(B[b][0]+" "+c)}&version=RVR1960" target="_blank" rel="noopener">BibleGateway · ${B[b][0]} ${c}</a><br>
-      <a href="https://www.bible.com/es/search/bible?q=${encodeURIComponent(B[b][0]+" "+c)}" target="_blank" rel="noopener">YouVersion · ${B[b][0]} ${c}</a><br><br>
+    $("#rBody").innerHTML=`<div class="rstate">No se pudo abrir el capítulo.<br>${e.message}<br><br>
+      Si acabas de publicar la app, confirma que la carpeta <b>biblia/</b> se subió completa (66 archivos).<br><br>
+      Mientras tanto:<br>
+      <a href="https://www.bible.com/es/search/bible?q=${encodeURIComponent(B[b][0]+" "+c)}" target="_blank" rel="noopener">Abrir en YouVersion</a><br><br>
       Puedes marcarlo como leído igual.</div>`;
   }
 }
 
 function pickVoice(){
   const vs=speechSynthesis.getVoices();
-  return vs.find(v=>/^es[-_]/i.test(v.lang)) || vs.find(v=>/^es/i.test(v.lang)) || null;
+  if(S.voice){ const m=vs.find(v=>v.voiceURI===S.voice); if(m) return m; }
+  // Preferir una voz instalada en el aparato: funciona sin conexión y sin gastar datos.
+  const es=vs.filter(v=>/^es/i.test(v.lang));
+  return es.find(v=>v.localService) || es[0] || null;
+}
+
+function renderVoices(){
+  const sel=$("#fVoice"), info=$("#voiceInfo");
+  if(!sel) return;
+  if(!("speechSynthesis" in window)){
+    sel.innerHTML=`<option>Este navegador no tiene síntesis de voz</option>`;
+    info.textContent="Prueba con Chrome."; return;
+  }
+  const es=speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang));
+  if(!es.length){
+    sel.innerHTML=`<option>Sin voces en español</option>`;
+    info.innerHTML=`Instálalas en <b>Ajustes → Sistema → Idiomas → Salida de texto a voz → Google TTS → Instalar datos de voz → Español</b>, y vuelve a abrir la app.`;
+    return;
+  }
+  const active=pickVoice();
+  sel.innerHTML=es.map(v=>
+    `<option value="${v.voiceURI}" ${active&&v.voiceURI===active.voiceURI?"selected":""}>${v.localService?"● ":"○ "}${v.name} · ${v.lang}</option>`
+  ).join("");
+  const local=es.filter(v=>v.localService).length;
+  info.innerHTML = active && active.localService
+    ? `● Voz instalada en el aparato: funciona sin conexión y no consume datos.`
+    : `○ Voz remota: necesita conexión y consume datos en cada capítulo.${local?" Hay voces instaladas disponibles — elige una marcada con ●." : " Descarga los datos de voz en español desde los ajustes del sistema para usarla sin conexión."}`;
 }
 function speakFrom(i){
   if(i>=chunks.length){ stopVoice(); return; }
   idx=i; speaking=true;
   $("#rPlay").textContent="❚❚ Pausar";
   const u=new SpeechSynthesisUtterance(chunks[i].t);
-  u.lang="es-ES"; u.rate=parseFloat($("#rRate").value);
-  const v=pickVoice(); if(v) u.voice=v;
+  u.rate=parseFloat($("#rRate").value);
+  const v=pickVoice();
+  if(v){ u.voice=v; u.lang=v.lang; } else { u.lang="es-ES"; }
   u.onend=()=>{ if(speaking) speakFrom(i+1); };
   u.onerror=()=>stopVoice();
   document.querySelectorAll("#rBody p").forEach(p=>p.classList.remove("speaking"));
@@ -540,13 +575,14 @@ document.addEventListener("click",e=>{
   if(rd){ const [b,c]=rd.dataset.rd.split("|"); openReader(b,+c); return; }
   const pl=e.target.closest("[data-plan]");
   if(pl){ S.plan=pl.dataset.plan; save(); renderAll(); window.scrollTo(0,0); return; }
-  if(e.target.id==="dl"){ prefetch(parseInt($("#fWeeks").value,10)); return; }
+  if(e.target.id==="dl"){ prefetch(); return; }
   if(e.target.id==="reset"){
     if(confirm("Se borra el progreso de los tres planes. ¿Continuar?")){ S.done={}; save(); renderAll(); }
   }
 });
+
 document.addEventListener("change",e=>{
-  if(e.target.id==="fSrc"){ S.version=e.target.value; save(); }
+  if(e.target.id==="fVoice"){ S.voice=e.target.value; save(); renderVoices(); }
 });
 
 $("#rClose").onclick=()=>{ stopVoice(); $("#reader").hidden=true; renderGauges(); renderHoy(); renderRuta(); };
@@ -561,35 +597,29 @@ $("#rDone").onclick=()=>{
   $("#rDone").textContent = isDone(cur.b,cur.c) ? "✓ Leído" : "✓ Marcar";
 };
 $("#rRate").onchange=()=>{ if(speaking){ speechSynthesis.cancel(); speakFrom(idx); } };
-if("speechSynthesis" in window) speechSynthesis.onvoiceschanged=()=>{};
+if("speechSynthesis" in window) speechSynthesis.onvoiceschanged=()=>renderVoices();
 
-/* ══ 8b. Descarga por lotes para uso sin conexión ════════════════════ */
-const chapUrl = (b,c) => `https://bible-api.com/${encodeURIComponent(B[b][1]+" "+c)}?translation=${S.version}`;
-
-async function prefetch(weeks){
-  const btn=$("#dl"), out=$("#dlstate");
-  const start=todayIndex(), end=Math.min(NDAYS-1, start+weeks*5-1);
-  const refs=[];
-  for(let i=start;i<=end;i++) for(const x of dayChapters(i)) refs.push([x.b,x.c]);
-
-  btn.disabled=true; btn.textContent="Descargando…";
-  out.innerHTML=`0 / ${refs.length} capítulos<div class="dlbar"><i></i></div>`;
+/* ══ 8b. Precarga de los 66 libros para uso sin conexión ═════════════ */
+async function prefetch(){
+  const btn=$("#dl"), out=$("#dlstate"), books=CANON.slice();
+  btn.disabled=true; btn.textContent="Guardando…";
+  out.innerHTML=`0 / ${books.length} libros<div class="dlbar"><i></i></div>`;
   const bar=out.querySelector(".dlbar i");
   let ok=0, fail=0;
 
-  for(let i=0;i<refs.length;i+=4){
-    await Promise.all(refs.slice(i,i+4).map(([b,c])=>
-      fetch(chapUrl(b,c)).then(r=>{ r.ok?ok++:fail++; }).catch(()=>{ fail++; })
+  for(let i=0;i<books.length;i+=6){
+    await Promise.all(books.slice(i,i+6).map(b=>
+      fetch(`biblia/${b}.json`).then(r=>{ r.ok?ok++:fail++; }).catch(()=>{ fail++; })
     ));
-    const n=Math.min(i+4,refs.length);
-    out.firstChild.textContent=`${n} / ${refs.length} capítulos`;
-    bar.style.width=(n/refs.length*100)+"%";
+    const n=Math.min(i+6,books.length);
+    out.firstChild.textContent=`${n} / ${books.length} libros`;
+    bar.style.width=(n/books.length*100)+"%";
   }
 
-  btn.disabled=false; btn.textContent="Descargar capítulos";
+  btn.disabled=false; btn.textContent="Guardar Biblia completa";
   out.innerHTML = fail
-    ? `${ok} guardados · ${fail} fallaron. Vuelve a intentarlo con mejor señal.`
-    : `${ok} capítulos guardados. Hasta el ${fmt(DATES[end])} puedes leer sin conexión.`;
+    ? `${ok} libros guardados · ${fail} fallaron. Reintenta con mejor señal.`
+    : `Biblia completa guardada (~4 MB). Ya funciona sin conexión.`;
 }
 
 /* ══ 8c. Service worker ══════════════════════════════════════════════ */

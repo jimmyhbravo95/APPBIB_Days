@@ -1,7 +1,7 @@
 /* Ruta 84 — service worker
    Tres cachés separadas para poder invalidar el código sin borrar el texto bíblico ya descargado. */
 
-const V      = "ruta84-v1";
+const V      = "ruta84-v3";
 const SHELL  = `${V}-shell`;   // HTML, íconos, manifest
 const FONTS  = `${V}-fonts`;   // Google Fonts
 const SCRIPT = "ruta84-texto"; // capítulos: sin versión, sobrevive a las actualizaciones
@@ -35,8 +35,8 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // Texto bíblico: cache-first permanente. Un capítulo no cambia nunca.
-  if (url.hostname === "bible-api.com") {
+  // Texto bíblico: cache-first permanente. Un libro no cambia nunca.
+  if (url.pathname.includes("/biblia/")) {
     e.respondWith(
       caches.open(SCRIPT).then(async c => {
         const hit = await c.match(req);
@@ -46,7 +46,7 @@ self.addEventListener("fetch", e => {
           if (res.ok) c.put(req, res.clone());
           return res;
         } catch (err) {
-          return new Response(JSON.stringify({ error: "sin conexión y sin copia local" }),
+          return new Response(JSON.stringify({ error: "libro no descargado y sin conexión" }),
             { status: 503, headers: { "Content-Type": "application/json" } });
         }
       })
