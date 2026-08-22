@@ -65,6 +65,23 @@ section[hidden]{display:none}
 .dayno{font-family:var(--display);font-size:52px;line-height:.85;color:var(--brass)}
 .dayno small{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em;display:block;margin-top:8px}
 .daymeta{text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em;line-height:1.7}
+.daynav{display:flex;align-items:center;gap:10px;margin-top:14px}
+.daynav button{
+  flex:none;width:52px;height:42px;border:1px solid var(--line);background:var(--surf);
+  color:var(--brass);font-size:22px;line-height:1;display:grid;place-items:center
+}
+.daynav button[disabled]{opacity:.28;color:var(--muted)}
+.daynav .rel{
+  flex:1;text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);border:1px solid var(--line);padding:13px 4px
+}
+.daynav .rel.now{color:var(--brass);border-color:var(--brass)}
+.backtoday{
+  width:100%;margin-top:8px;padding:10px;border:1px solid var(--line);color:var(--muted);
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase
+}
+.cell{cursor:pointer}
+.cell.viewing{outline:2px dashed var(--brass);outline-offset:1px}
 .rule{height:1px;background:var(--line);margin:16px 0}
 
 /* ── Pistas y capítulos ───────────────────── */
@@ -107,7 +124,7 @@ section[hidden]{display:none}
 .cell.today{outline:2px solid var(--brass);outline-offset:1px;color:var(--brass);font-weight:600}
 .cell.future{opacity:.42}
 .weeklist{margin-top:26px}
-.wrow{display:grid;grid-template-columns:38px 1fr auto;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:baseline}
+.wrow{cursor:pointer;display:grid;grid-template-columns:38px 1fr auto;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:baseline}
 .wrow .n{font-family:var(--mono);font-size:11px;color:var(--brass);letter-spacing:.06em}
 .wrow .d{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
 .wrow .t{color:var(--text);line-height:1.45}
@@ -362,12 +379,31 @@ function renderGauges(){
   g.className = "v " + (m.debt===0?"ok":m.debt<=15?"neutral":"bad");
 }
 
+/* Día que se está viendo. null = seguir a la fecha real. */
+let viewDay=null;
+const curDay = () => viewDay===null ? todayIndex() : viewDay;
+function goDay(i){
+  const t=todayIndex();
+  viewDay = Math.max(0, Math.min(NDAYS-1, i));
+  if(viewDay===t) viewDay=null;
+  renderHoy(); renderRuta();
+  document.querySelector('nav button[data-tab="hoy"]').click();
+}
+
 function renderHoy(){
-  const di=todayIndex(), p=PLANS[S.plan], st=dayState(di);
+  const di=curDay(), ti=todayIndex(), p=PLANS[S.plan], st=dayState(di);
+  const rel = di===ti ? "HOY" : di<ti ? `HACE ${ti-di} ${ti-di===1?"DÍA":"DÍAS"}` : `EN ${di-ti} ${di-ti===1?"DÍA":"DÍAS"}`;
   let h=`<div class="dayhead">
     <div class="dayno">${String(di+1).padStart(2,"0")}<small>DE ${NDAYS}</small></div>
     <div class="daymeta">${fmt(DATES[di])}<br>${st.done} / ${st.total} capítulos<br>Plan ${p.code}</div>
-  </div><div class="rule"></div>`;
+  </div>
+  <div class="daynav">
+    <button data-go="${di-1}" ${di===0?"disabled":""} aria-label="Día anterior">‹</button>
+    <span class="rel${di===ti?" now":""}">${rel}</span>
+    <button data-go="${di+1}" ${di===NDAYS-1?"disabled":""} aria-label="Día siguiente">›</button>
+  </div>
+  ${di!==ti?`<button class="backtoday" data-go="${ti}">↩ Volver a hoy</button>`:""}
+  <div class="rule"></div>`;
 
   for(const t in p.tracks){
     const list=p.tracks[t][di];
@@ -404,7 +440,8 @@ function renderRuta(){
       if(s.full) cls+=" done"; else if(s.any) cls+=" partial";
       else if(i<ti) cls+=" overdue"; else if(i>ti) cls+=" future";
       if(i===ti) cls+=" today";
-      h+=`<div class="${cls}" title="${fmt(DATES[i])} · ${s.done}/${s.total}">${DATES[i].getDate()}</div>`;
+      if(i===curDay() && i!==ti) cls+=" viewing";
+      h+=`<button class="${cls}" data-go="${i}" title="${fmt(DATES[i])} · ${s.done}/${s.total} capítulos">${DATES[i].getDate()}</button>`;
     }
   }
   h+=`</div><div class="weeklist">`;
@@ -415,7 +452,7 @@ function renderRuta(){
       const chs=[]; for(let i=a;i<=b;i++) chs.push(...p.tracks[t][i]);
       if(chs.length) refs.push(condense(chs));
     }
-    h+=`<div class="wrow"><div class="n">S${w+1}</div><div class="t">${refs.join(" · ")}</div>
+    h+=`<div class="wrow" data-go="${a}"><div class="n">S${w+1}</div><div class="t">${refs.join(" · ")}</div>
         <div class="d">${DATES[a].getDate()}–${DATES[b].getDate()} ${MES[DATES[b].getMonth()]}</div></div>`;
   }
   $("#tab-ruta").innerHTML=h+`</div>`;
@@ -569,6 +606,8 @@ document.querySelectorAll("nav button").forEach(btn=>{
 });
 
 document.addEventListener("click",e=>{
+  const go=e.target.closest("[data-go]");
+  if(go && !go.disabled){ goDay(parseInt(go.dataset.go,10)); return; }
   const tg=e.target.closest("[data-tg]");
   if(tg){ const [b,c]=tg.dataset.tg.split("|"); toggle(b,+c); renderGauges(); renderHoy(); renderRuta(); return; }
   const rd=e.target.closest("[data-rd]");
@@ -639,6 +678,30 @@ function showInstall(){
   d.onclick=async()=>{ d.remove(); installEvt.prompt(); await installEvt.userChoice; installEvt=null; };
   document.body.appendChild(d);
 }
+
+/* ══ 8d. Deslizar para cambiar de día ═══════════════════════════════ */
+(()=>{
+  const el=$("#tab-hoy"); let x0=null, y0=null;
+  el.addEventListener("touchstart",e=>{
+    if(e.touches.length!==1){ x0=null; return; }
+    x0=e.touches[0].clientX; y0=e.touches[0].clientY;
+  },{passive:true});
+  el.addEventListener("touchend",e=>{
+    if(x0===null) return;
+    const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0;
+    x0=null;
+    // solo si el gesto es claramente horizontal, para no pelear con el scroll
+    if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*1.8) return;
+    goDay(curDay() + (dx<0 ? 1 : -1));
+  },{passive:true});
+})();
+
+document.addEventListener("keydown",e=>{
+  if(!$("#reader").hidden) return;
+  if($("#tab-hoy").hidden) return;
+  if(e.key==="ArrowLeft") goDay(curDay()-1);
+  else if(e.key==="ArrowRight") goDay(curDay()+1);
+});
 
 /* ══ 9. Arranque ═════════════════════════════════════════════════════ */
 (async()=>{

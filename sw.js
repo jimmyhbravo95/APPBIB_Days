@@ -1,7 +1,7 @@
 /* Ruta 84 — service worker
    Tres cachés separadas para poder invalidar el código sin borrar el texto bíblico ya descargado. */
 
-const V      = "ruta84-v3";
+const V      = "ruta84-v4";
 const SHELL  = `${V}-shell`;   // HTML, íconos, manifest
 const FONTS  = `${V}-fonts`;   // Google Fonts
 const SCRIPT = "ruta84-texto"; // capítulos: sin versión, sobrevive a las actualizaciones
